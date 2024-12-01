@@ -68,43 +68,80 @@ void UUTHUBEditorUtils::ExportsActors(const TArray<FString>& ActorsToExports)
     Module.Get().ExportAssets(ActorsToExports, GetExportDirRework());
 }
 
-void UUTHUBEditorUtils::LogAssetDependencies()
+void UUTHUBEditorUtils::ListAssetsWithDependencies()
 {
+	const FAssetRegistryModule& AssetRegistryModule = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
+	const IAssetRegistry& AssetRegistry = AssetRegistryModule.Get();
 
-    TArray<FString> OutputLines;
+	TArray<FString> OutputText;
+	
+	TArray<FAssetData> AllAssets;
+	AssetRegistry.GetAllAssets(AllAssets);
 
-    // Obtener el módulo del Asset Registry
-    const FAssetRegistryModule& AssetRegistryModule = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
-    const IAssetRegistry& AssetRegistry = AssetRegistryModule.Get();
+	for (const FAssetData& Asset : AllAssets)
+	{
+		
+		TArray<FName> References;
+		AssetRegistry.GetReferencers(Asset.AssetName,References);
+		if (References.Num() > 0)
+		{
+			continue;
+		}
+		
+		OutputText.Add(FString::Printf(TEXT("%s [ROOT]\n"), *Asset.GetSoftObjectPath().ToString()));
+		
+		// TSet<FName> Dependencies;
+		// TSet<FName> VisitedAssets; // Evitar ciclos infinitos
+		// GetDependenciesRecursively(Asset.PackageName, AssetRegistry, Dependencies, VisitedAssets);
+		//
+		// // Si el asset tiene dependencias, añadir al mapa
+		// if (Dependencies.Num() > 0)
+		// {
+		// 	AssetDependencies.Add(Asset.PackageName, Dependencies);
+		// }
+	}
+	ExportListAsLogFile(OutputText);	
+}
 
-    // Obtener todos los assets en el proyecto
-    TArray<FAssetData> AllAssets;
-    AssetRegistry.GetAllAssets(AllAssets);
+// void UUTHUBEditorUtils::GetDependenciesRecursively(const FName& AssetName, IAssetRegistry& AssetRegistry, TSet<FName>& OutDependencies, TSet<FName>& VisitedAssets)
+// {
+// 	// Evitar procesar el mismo asset más de una vez
+// 	if (VisitedAssets.Contains(AssetName))
+// 	{
+// 		return;
+// 	}
+// 	VisitedAssets.Add(AssetName);
+//
+// 	TArray<FName> DirectDependencies;
+// 	// Si falla la consulta, loguear y continuar
+// 	if (!AssetRegistry.GetDependencies(AssetName, DirectDependencies))
+// 	{
+// 		UE_LOG(LogTemp, Warning, TEXT("No se pudieron obtener las dependencias para el asset %s"), *AssetName.ToString());
+// 		return;
+// 	}
+//
+// 	for (const FName& Dependency : DirectDependencies)
+// 	{
+// 		if (!OutDependencies.Contains(Dependency))
+// 		{
+// 			OutDependencies.Add(Dependency);
+// 			// Llamada recursiva para explorar subdependencias
+// 			GetDependenciesRecursively(Dependency, AssetRegistry, OutDependencies, VisitedAssets);
+// 		}
+// 	}
+// }
 
-    for (const FAssetData& Asset : AllAssets)
-    {
-        TArray<FName> Dependencies;
-        AssetRegistry.GetDependencies(Asset.PackageName, Dependencies);
+void UUTHUBEditorUtils::ExportListAsLogFile(const TArray<FString>& InList)
+{
+	if(InList.IsEmpty()) return;
+	
+	const FString FileName = FPaths::ProjectSavedDir() /
+							TEXT("Logs/RefLogOut_") +
+							FDateTime::Now().ToString() +
+							TEXT(".log");
 
-        if (Dependencies.Num() > 0)
-        {
-            FString AssetRoot = FString::Printf(TEXT("%s [ROOT]"), *Asset.AssetName.ToString());
-            OutputLines.Add(AssetRoot);
-
-            for (const FName& Dependency : Dependencies)
-            {
-                FString DependencyLine = FString::Printf(TEXT("|- %s"), *Dependency.ToString());
-                OutputLines.Add(DependencyLine);
-            }
-        }
-    }
-
-    // Escribir la salida a un archivo
-    const FString FileName = FString::Printf(TEXT("RefLogOut_%s.log"), *FDateTime::Now().ToString());
-    const FString FilePath = FPaths::ProjectSavedDir() / TEXT("Logs") / FileName;
-
-    FFileHelper::SaveStringArrayToFile(OutputLines, *FilePath);
-
-    // Mostrar un mensaje de confirmación
-    FMessageDialog::Open(EAppMsgType::Ok, FText::FromString(FString::Printf(TEXT("Log de dependencias guardado en: %s"), *FilePath)));
+	if(FFileHelper::SaveStringArrayToFile(InList, *FileName))
+	{
+		FMessageDialog::Open(EAppMsgType::Ok, FText::FromString(FString::Printf(TEXT("Log de dependencias guardado en: %s"), *FileName)));
+	}
 }
