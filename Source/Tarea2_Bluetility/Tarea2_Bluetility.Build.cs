@@ -18,6 +18,8 @@ public class Tarea2_Bluetility : ModuleRules
 			//PrivateDependencyModuleNames.Add("EditorSubsystem");
 			PrivateDependencyModuleNames.Add("UnrealEd");
 			PrivateDependencyModuleNames.Add("AssetTools");
+			PrivateDependencyModuleNames.Add("Json");
+			PrivateDependencyModuleNames.Add("JsonSerialization");
 		}
 	}
 }

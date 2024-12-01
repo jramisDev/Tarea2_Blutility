@@ -4,8 +4,18 @@
 #include "Kismet/BlueprintFunctionLibrary.h"
 #include "UTHUBEditorUtils.generated.h"
 
-
 class IAssetRegistry;
+class FJsonObject;
+
+USTRUCT(BlueprintType, Category = "Utils | Json")
+struct FMeshValidationJson
+{
+	GENERATED_BODY()
+	
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Utils | Json") bool bHasManyTris;
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Utils | Json") bool bHasManyMats;
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Utils | Json") bool bIsMassive;
+};
 
 UCLASS()
 class TAREA2_BLUETILITY_API UUTHUBEditorUtils : public UBlueprintFunctionLibrary
@@ -14,7 +24,7 @@ class TAREA2_BLUETILITY_API UUTHUBEditorUtils : public UBlueprintFunctionLibrary
 
 	/***** START Export Static Mesh Actors of Level *****/
 	UFUNCTION()
-	static bool CheckValidations(float InNumTriangles, float InNumMaterials, float InNumMeshSize, const UStaticMeshComponent* MeshComp);
+	static void CheckValidations(float InNumTriangles, float InNumMaterials, float InNumMeshSize, const UStaticMeshComponent* MeshComp, FMeshValidationJson& ValidationStruct);
 	/***** END Export Static Mesh Actors of Level *****/
 
 	/***** START Get Assets Not referenced and theirs dependencies *****/
@@ -34,6 +44,7 @@ public:
 	
 	UFUNCTION(BlueprintCallable, Category="Utils")
 	static void ExportsActors(const TArray<FString>& ActorsToExports);
+	
 	/***** END Export Static Mesh Actors of Level *****/
 	
 	/***** START Get Assets Not referenced and theirs dependencies *****/
@@ -43,4 +54,5 @@ public:
 	UFUNCTION(BlueprintCallable, Category="Utils")
 	static void ExportListAsLogFile(const TArray<FString>& InList);
 	/***** END Get Assets Not referenced and theirs dependencies *****/
+
 };

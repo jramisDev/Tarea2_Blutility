@@ -15,6 +15,8 @@ void UUTHUBEditorUtils::ListAndExportStaticMeshes(const float InNumTriangles, co
     if(!World) return;
 
     TArray<FString> ActorsPathsToExports;
+	TArray<TSharedPtr<FJsonObject>> ValidationMeshJson;
+
     
     TArray<AActor*> FoundActors;
     UGameplayStatics::GetAllActorsOfClass(World, AStaticMeshActor::StaticClass(), FoundActors);
@@ -27,7 +29,10 @@ void UUTHUBEditorUtils::ListAndExportStaticMeshes(const float InNumTriangles, co
         const UStaticMesh* Mesh = MeshComp->GetStaticMesh();
         if (!Mesh) continue;
 
-        if(CheckValidations(InNumTriangles, InNumMaterials, InNumMeshSize, MeshComp))
+        FMeshValidationJson ValidationStruct;
+    	CheckValidations(InNumTriangles, InNumMaterials, InNumMeshSize, MeshComp, ValidationStruct);
+    	
+        if(ValidationStruct.bIsMassive || ValidationStruct.bHasManyMats || ValidationStruct.bHasManyTris)
         {
             FString PathString;
             UKismetSystemLibrary::BreakSoftObjectPath(UKismetSystemLibrary::GetSoftObjectPath(Mesh), PathString);
@@ -35,14 +40,39 @@ void UUTHUBEditorUtils::ListAndExportStaticMeshes(const float InNumTriangles, co
             
             //UE_LOG(LogTemp, Display, TEXT("%s"), *TopLevelAssetPath.GetPackageName().ToString());
             //ActorsPathsToExports.Add(TopLevelAssetPath.GetPackageName().ToString());
-            ActorsPathsToExports.Add(PathString);
+        	ActorsPathsToExports.AddUnique(PathString);
+        	
+        	TSharedPtr<FJsonObject> MeshEntry = MakeShareable(new FJsonObject());
+        	MeshEntry->SetBoolField("bHasManyTris", ValidationStruct.bHasManyTris);
+        	MeshEntry->SetBoolField("bHasManyMats", ValidationStruct.bHasManyMats);
+        	MeshEntry->SetBoolField("bIsMassive", ValidationStruct.bIsMassive);
+            MeshEntry->SetStringField("MeshName", Mesh->GetName());
+        	ValidationMeshJson.AddUnique(MeshEntry);
         }
     }
-    ExportsActors(ActorsPathsToExports);    
+    ExportsActors(ActorsPathsToExports);
+
+	// Exportar a JSON
+	FString JSONOutput;
+	TSharedRef<TJsonWriter<>> Writer = TJsonWriterFactory<>::Create(&JSONOutput);
+	Writer->WriteObjectStart();
+	Writer->WriteArrayStart(TEXT("Meshes"));
+
+	for (const TSharedPtr<FJsonObject>& Entry : ValidationMeshJson)
+	{
+		FJsonSerializer::Serialize(Entry.ToSharedRef(), Writer);
+	}
+
+	Writer->WriteArrayEnd();
+	Writer->WriteObjectEnd();
+	Writer->Close();
+
+    const FString JSONPath = FPaths::Combine(GetExportDirRework(), TEXT("StaticMeshRework_report.json"));
+	FFileHelper::SaveStringToFile(JSONOutput, *JSONPath);
 }
 
-bool UUTHUBEditorUtils::CheckValidations(const float InNumTriangles, const float InNumMaterials, const float InNumMeshSize,
-                                          const UStaticMeshComponent* MeshComp)
+void UUTHUBEditorUtils::CheckValidations(const float InNumTriangles, const float InNumMaterials, const float InNumMeshSize,
+                                          const UStaticMeshComponent* MeshComp, FMeshValidationJson& ValidationStruct)
 {
     // Verificar condiciones
     const bool bHasManyTris = MeshComp->GetStaticMesh()->GetRenderData()->LODResources[0].GetNumTriangles() > InNumTriangles;
@@ -53,7 +83,9 @@ bool UUTHUBEditorUtils::CheckValidations(const float InNumTriangles, const float
     const FVector MeshSize = MeshComp->GetStaticMesh()->GetBoundingBox().GetSize();
     const bool bIsMassive = MeshSize.Size() > InNumMeshSize;
 
-    return (bHasManyTris || bHasManyMats || bIsMassive);
+	ValidationStruct.bHasManyTris = bHasManyTris;
+	ValidationStruct.bHasManyMats = bHasManyMats;
+	ValidationStruct.bIsMassive = bIsMassive;
 }
 
 FString UUTHUBEditorUtils::GetExportDirRework()
