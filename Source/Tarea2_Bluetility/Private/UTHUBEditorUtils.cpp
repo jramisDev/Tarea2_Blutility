@@ -43,18 +43,19 @@ void UUTHUBEditorUtils::ListAndExportStaticMeshes(const float InNumTriangles, co
         	ActorsPathsToExports.AddUnique(PathString);
         	
         	TSharedPtr<FJsonObject> MeshEntry = MakeShareable(new FJsonObject());
+            MeshEntry->SetStringField("MeshName", Mesh->GetName());
         	MeshEntry->SetBoolField("bHasManyTris", ValidationStruct.bHasManyTris);
         	MeshEntry->SetBoolField("bHasManyMats", ValidationStruct.bHasManyMats);
         	MeshEntry->SetBoolField("bIsMassive", ValidationStruct.bIsMassive);
-            MeshEntry->SetStringField("MeshName", Mesh->GetName());
         	ValidationMeshJson.AddUnique(MeshEntry);
         }
     }
-    ExportsActors(ActorsPathsToExports);
+    ExportActors(ActorsPathsToExports);
+	//ExportJson(ValidationMeshJson); Me da error en el TSharedRef y no veo porqueee
 
 	// Exportar a JSON
 	FString JSONOutput;
-	TSharedRef<TJsonWriter<>> Writer = TJsonWriterFactory<>::Create(&JSONOutput);
+	const TSharedRef<TJsonWriter<>> Writer = TJsonWriterFactory<>::Create(&JSONOutput);
 	Writer->WriteObjectStart();
 	Writer->WriteArrayStart(TEXT("Meshes"));
 
@@ -67,7 +68,7 @@ void UUTHUBEditorUtils::ListAndExportStaticMeshes(const float InNumTriangles, co
 	Writer->WriteObjectEnd();
 	Writer->Close();
 
-    const FString JSONPath = FPaths::Combine(GetExportDirRework(), TEXT("StaticMeshRework_report.json"));
+	const FString JSONPath = FPaths::Combine(GetExportDirRework(), TEXT("StaticMeshRework_report.json"));
 	FFileHelper::SaveStringToFile(JSONOutput, *JSONPath);
 }
 
@@ -93,7 +94,28 @@ FString UUTHUBEditorUtils::GetExportDirRework()
     return FPaths::ProjectSavedDir() / TEXT("Rework");
 }
 
-void UUTHUBEditorUtils::ExportsActors(const TArray<FString>& ActorsToExports)
+// void UUTHUBEditorUtils::ExportJson(TArray<TSharedPtr<FJsonObject>> InValidationMeshJson)
+// {
+// 	// Exportar a JSON
+// 	FString JSONOutput;
+// 	const TSharedRef<TJsonWriter<>> Writer = TJsonWriterFactory<>::Create(&JSONOutput);
+// 	Writer->WriteObjectStart();
+// 	Writer->WriteArrayStart(TEXT("Meshes"));
+//
+// 	for (const TSharedPtr<FJsonObject>& Entry : InValidationMeshJson)
+// 	{
+// 		FJsonSerializer::Serialize(Entry.ToSharedRef(), Writer);
+// 	}
+//
+// 	Writer->WriteArrayEnd();
+// 	Writer->WriteObjectEnd();
+// 	Writer->Close();
+//
+// 	const FString JSONPath = FPaths::Combine(GetExportDirRework(), TEXT("StaticMeshRework_report.json"));
+// 	FFileHelper::SaveStringToFile(JSONOutput, *JSONPath);
+// }
+
+void UUTHUBEditorUtils::ExportActors(const TArray<FString>& ActorsToExports)
 {
     const FAssetToolsModule& Module = FModuleManager::GetModuleChecked<FAssetToolsModule>("AssetTools");
     

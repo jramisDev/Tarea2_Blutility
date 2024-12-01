@@ -39,16 +39,19 @@ public:
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category="Utils")
 	static FString GetExportDirRework();
 
-	UFUNCTION(BlueprintCallable, meta=(InNumTriangles = 10000.f, InNumMaterials = 5.f, InNumMeshSize = 6000.f), Category = "StaticMeshUtility")
+	UFUNCTION(BlueprintCallable, meta=(InNumTriangles = 10000.f, InNumMaterials = 5.f, InNumMeshSize = 6000.f), Category = "Utils | Ejercicio2")
 	static void ListAndExportStaticMeshes(const float InNumTriangles, const float InNumMaterials, const float InNumMeshSize);
 	
 	UFUNCTION(BlueprintCallable, Category="Utils")
-	static void ExportsActors(const TArray<FString>& ActorsToExports);
+	static void ExportActors(const TArray<FString>& ActorsToExports);
+	
+	// UFUNCTION(BlueprintCallable, Category="Utils")
+	// static void ExportJson(TArray<TSharedPtr<FJsonObject>> Array);
 	
 	/***** END Export Static Mesh Actors of Level *****/
 	
 	/***** START Get Assets Not referenced and theirs dependencies *****/
-	UFUNCTION(BlueprintCallable, Category = "Utilities")
+	UFUNCTION(BlueprintCallable, Category = "Utils | Ejercicio1")
 	static void ListAssetsWithDependencies();
 
 	UFUNCTION(BlueprintCallable, Category="Utils")
