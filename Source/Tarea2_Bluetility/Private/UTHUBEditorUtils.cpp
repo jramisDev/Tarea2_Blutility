@@ -94,31 +94,9 @@ FString UUTHUBEditorUtils::GetExportDirRework()
     return FPaths::ProjectSavedDir() / TEXT("Rework");
 }
 
-// void UUTHUBEditorUtils::ExportJson(TArray<TSharedPtr<FJsonObject>> InValidationMeshJson)
-// {
-// 	// Exportar a JSON
-// 	FString JSONOutput;
-// 	const TSharedRef<TJsonWriter<>> Writer = TJsonWriterFactory<>::Create(&JSONOutput);
-// 	Writer->WriteObjectStart();
-// 	Writer->WriteArrayStart(TEXT("Meshes"));
-//
-// 	for (const TSharedPtr<FJsonObject>& Entry : InValidationMeshJson)
-// 	{
-// 		FJsonSerializer::Serialize(Entry.ToSharedRef(), Writer);
-// 	}
-//
-// 	Writer->WriteArrayEnd();
-// 	Writer->WriteObjectEnd();
-// 	Writer->Close();
-//
-// 	const FString JSONPath = FPaths::Combine(GetExportDirRework(), TEXT("StaticMeshRework_report.json"));
-// 	FFileHelper::SaveStringToFile(JSONOutput, *JSONPath);
-// }
-
 void UUTHUBEditorUtils::ExportActors(const TArray<FString>& ActorsToExports)
 {
     const FAssetToolsModule& Module = FModuleManager::GetModuleChecked<FAssetToolsModule>("AssetTools");
-    
     Module.Get().ExportAssets(ActorsToExports, GetExportDirRework());
 }
 
@@ -127,75 +105,59 @@ void UUTHUBEditorUtils::ListAssetsWithDependencies()
 	const FAssetRegistryModule& AssetRegistryModule = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
 	const IAssetRegistry& AssetRegistry = AssetRegistryModule.Get();
 
-	TArray<FString> OutputText;
-	
 	TArray<FAssetData> AllAssets;
 	AssetRegistry.GetAllAssets(AllAssets);
+	
+	FStringBuilderBase OutputBuilder;
 
 	for (const FAssetData& Asset : AllAssets)
 	{
-		
 		TArray<FName> References;
-		AssetRegistry.GetReferencers(Asset.AssetName,References);
-		if (References.Num() > 0)
+		if (!AssetRegistry.GetReferencers(Asset.AssetName, References))
 		{
-			continue;
+			OutputBuilder.Appendf(TEXT("%s [ROOT]\n"), *Asset.GetSoftObjectPath().ToString());
+
+			TSet<FName> AllDependencies;
+			GetAllDependenciesRecursive(AssetRegistry, Asset.PackageName, AllDependencies);
+
+			for (const FName& Dependency : AllDependencies)
+			{
+				OutputBuilder.Appendf(TEXT("   | - %s\n"), *Dependency.ToString());
+			}
 		}
-		
-		OutputText.Add(FString::Printf(TEXT("%s [ROOT]\n"), *Asset.GetSoftObjectPath().ToString()));
-		
-		// TSet<FName> Dependencies;
-		// TSet<FName> VisitedAssets; // Evitar ciclos infinitos
-		// GetDependenciesRecursively(Asset.PackageName, AssetRegistry, Dependencies, VisitedAssets);
-		//
-		// // Si el asset tiene dependencias, añadir al mapa
-		// if (Dependencies.Num() > 0)
-		// {
-		// 	AssetDependencies.Add(Asset.PackageName, Dependencies);
-		// }
 	}
-	ExportListAsLogFile(OutputText);	
+	ExportListAsLogFile(OutputBuilder.ToString());
 }
 
-// void UUTHUBEditorUtils::GetDependenciesRecursively(const FName& AssetName, IAssetRegistry& AssetRegistry, TSet<FName>& OutDependencies, TSet<FName>& VisitedAssets)
-// {
-// 	// Evitar procesar el mismo asset más de una vez
-// 	if (VisitedAssets.Contains(AssetName))
-// 	{
-// 		return;
-// 	}
-// 	VisitedAssets.Add(AssetName);
-//
-// 	TArray<FName> DirectDependencies;
-// 	// Si falla la consulta, loguear y continuar
-// 	if (!AssetRegistry.GetDependencies(AssetName, DirectDependencies))
-// 	{
-// 		UE_LOG(LogTemp, Warning, TEXT("No se pudieron obtener las dependencias para el asset %s"), *AssetName.ToString());
-// 		return;
-// 	}
-//
-// 	for (const FName& Dependency : DirectDependencies)
-// 	{
-// 		if (!OutDependencies.Contains(Dependency))
-// 		{
-// 			OutDependencies.Add(Dependency);
-// 			// Llamada recursiva para explorar subdependencias
-// 			GetDependenciesRecursively(Dependency, AssetRegistry, OutDependencies, VisitedAssets);
-// 		}
-// 	}
-// }
-
-void UUTHUBEditorUtils::ExportListAsLogFile(const TArray<FString>& InList)
+void UUTHUBEditorUtils::GetAllDependenciesRecursive(const IAssetRegistry& AssetRegistry, const FName& PackageName, TSet<FName>& AllDependencies)
 {
-	if(InList.IsEmpty()) return;
+	TArray<FName> DirectDependencies;
+	if (AssetRegistry.GetDependencies(PackageName, DirectDependencies))
+	{
+		for (const FName& Dependency : DirectDependencies)
+		{
+			// Solo procesar si aún no hemos agregado esta dependencia
+			if (!AllDependencies.Contains(Dependency))
+			{
+				AllDependencies.Add(Dependency);
+				// Llamada recursiva para procesar las dependencias de este elemento
+				GetAllDependenciesRecursive(AssetRegistry, Dependency, AllDependencies);
+			}
+		}
+	}
+}
+
+void UUTHUBEditorUtils::ExportListAsLogFile(const FString& LogContent)
+{
+	if(LogContent.IsEmpty()) return;
 	
-	const FString FileName = FPaths::ProjectSavedDir() /
+	const FString FilePath = FPaths::ProjectSavedDir() /
 							TEXT("Logs/RefLogOut_") +
 							FDateTime::Now().ToString() +
 							TEXT(".log");
-
-	if(FFileHelper::SaveStringArrayToFile(InList, *FileName))
+	
+	if(FFileHelper::SaveStringToFile(LogContent, *FilePath))
 	{
-		FMessageDialog::Open(EAppMsgType::Ok, FText::FromString(FString::Printf(TEXT("Log de dependencias guardado en: %s"), *FileName)));
+		FMessageDialog::Open(EAppMsgType::Ok, FText::FromString(FString::Printf(TEXT("Log de dependencias guardado en: %s"), *FilePath)));
 	}
 }

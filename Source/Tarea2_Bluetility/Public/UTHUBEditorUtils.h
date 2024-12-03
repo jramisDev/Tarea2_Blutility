@@ -23,13 +23,11 @@ class TAREA2_BLUETILITY_API UUTHUBEditorUtils : public UBlueprintFunctionLibrary
 	GENERATED_BODY()
 
 	/***** START Export Static Mesh Actors of Level *****/
-	UFUNCTION()
 	static void CheckValidations(float InNumTriangles, float InNumMaterials, float InNumMeshSize, const UStaticMeshComponent* MeshComp, FMeshValidationJson& ValidationStruct);
 	/***** END Export Static Mesh Actors of Level *****/
 
 	/***** START Get Assets Not referenced and theirs dependencies *****/
-	// UFUNCTION()
-	// static void GetDependenciesRecursively(const FName& AssetName, IAssetRegistry& AssetRegistry, TSet<FName>& OutDependencies, TSet<FName>& VisitedAssets);
+	static void GetAllDependenciesRecursive(const IAssetRegistry& AssetRegistry, const FName& PackageName, TSet<FName>& AllDependencies);
 	/***** END Get Assets Not referenced and theirs dependencies *****/
 
 	
@@ -44,18 +42,15 @@ public:
 	
 	UFUNCTION(BlueprintCallable, Category="Utils")
 	static void ExportActors(const TArray<FString>& ActorsToExports);
-	
-	// UFUNCTION(BlueprintCallable, Category="Utils")
-	// static void ExportJson(TArray<TSharedPtr<FJsonObject>> Array);
-	
 	/***** END Export Static Mesh Actors of Level *****/
-	
+
+	static void GetDependenciesRecursively(const IAssetRegistry& AssetRegistry, const FAssetData& Asset, TArray<FString> Array);
 	/***** START Get Assets Not referenced and theirs dependencies *****/
 	UFUNCTION(BlueprintCallable, Category = "Utils | Ejercicio1")
 	static void ListAssetsWithDependencies();
 
 	UFUNCTION(BlueprintCallable, Category="Utils")
-	static void ExportListAsLogFile(const TArray<FString>& InList);
+	static void ExportListAsLogFile(const FString& LogContent);
 	/***** END Get Assets Not referenced and theirs dependencies *****/
 
 };
