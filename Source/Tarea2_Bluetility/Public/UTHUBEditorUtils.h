@@ -44,7 +44,6 @@ public:
 	static void ExportActors(const TArray<FString>& ActorsToExports);
 	/***** END Export Static Mesh Actors of Level *****/
 
-	static void GetDependenciesRecursively(const IAssetRegistry& AssetRegistry, const FAssetData& Asset, TArray<FString> Array);
 	/***** START Get Assets Not referenced and theirs dependencies *****/
 	UFUNCTION(BlueprintCallable, Category = "Utils | Ejercicio1")
 	static void ListAssetsWithDependencies();
@@ -52,5 +51,4 @@ public:
 	UFUNCTION(BlueprintCallable, Category="Utils")
 	static void ExportListAsLogFile(const FString& LogContent);
 	/***** END Get Assets Not referenced and theirs dependencies *****/
-
 };
